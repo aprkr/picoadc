@@ -45,7 +45,7 @@ void main() {
 #define SYS_CLK_BASE 120000
     set_sys_clock_khz(SYS_CLK_BASE,true);
     stdio_usb_init();
-    sleep_ms(4000);
+    sleep_ms(100);
 
     adc_gpio_init(26);
     adc_init();
@@ -57,7 +57,7 @@ void main() {
         false,   // We won't see the ERR bit because of 8 bit reads; disable.
         true     // Shift each sample to 8 bits when pushing to FIFO
     );
-    adc_set_clkdiv(9600);
+    adc_set_clkdiv(192); // 250 kHz
     sleep_ms(10);
     uint dma_chan1 = dma_claim_unused_channel(true);
     dma_channel_config cfg1 = dma_channel_get_default_config(dma_chan1);
@@ -92,6 +92,9 @@ void main() {
         true            // start immediately
     );
     channel_config_set_chain_to(&cfg2, dma_chan1);
+    while (tud_cdc_n_available(0) == 0) {
+
+    }
     adc_run(true);
     while (1) {
         dma_channel_wait_for_finish_blocking(dma_chan1);
