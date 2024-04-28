@@ -6,11 +6,11 @@
 #include "hardware/structs/bus_ctrl.h"
 #include "tusb.h"
 
-uint8_t capture_buf[2048];
-uint8_t capture_buf2[2048];
-volatile uint32_t *tstsa0,*tstsa1;
-volatile uint32_t *taddra0,*taddra1;
-volatile int lowerhalf; //are we processing the upper or lower half of the data buffers
+#define BUF_SIZE 81920
+#define SHIFT true
+
+uint8_t capture_buf[BUF_SIZE];
+uint8_t capture_buf2[BUF_SIZE];
 
 void my_stdio_usb_out_chars(const char *buf, int length) {
     static uint64_t last_avail_time;
@@ -45,6 +45,9 @@ void main() {
 #define SYS_CLK_BASE 120000
     set_sys_clock_khz(SYS_CLK_BASE,true);
     stdio_usb_init();
+    const uint LED_PIN = PICO_DEFAULT_LED_PIN;
+    gpio_init(LED_PIN);
+    gpio_set_dir(LED_PIN, GPIO_OUT);
     sleep_ms(100);
 
     adc_gpio_init(26);
@@ -55,7 +58,7 @@ void main() {
         true,    // Enable DMA data request (DREQ)
         1,       // DREQ (and IRQ) asserted when at least 1 sample present
         false,   // We won't see the ERR bit because of 8 bit reads; disable.
-        true     // Shift each sample to 8 bits when pushing to FIFO
+        SHIFT     // Shift each sample to 8 bits when pushing to FIFO
     );
     adc_set_clkdiv(192); // 250 kHz
     sleep_ms(10);
@@ -77,43 +80,48 @@ void main() {
     // Pace transfers based on availability of ADC samples
     channel_config_set_dreq(&cfg1, DREQ_ADC);
     channel_config_set_dreq(&cfg2, DREQ_ADC);
-
+    channel_config_set_chain_to(&cfg1, dma_chan2);
     dma_channel_configure(dma_chan1, &cfg1,
         capture_buf,    // dst
         &adc_hw->fifo,  // src
-        2048,  // transfer count
+        BUF_SIZE,  // transfer count
         true            // start immediately
     );
-
-    dma_channel_configure(dma_chan2, &cfg2,
-        capture_buf2,    // dst
-        &adc_hw->fifo,  // src
-        2048,  // transfer count
-        true            // start immediately
-    );
-    channel_config_set_chain_to(&cfg2, dma_chan1);
+    // dma_channel_configure(dma_chan2, &cfg2,
+    //     capture_buf2,    // dst
+    //     &adc_hw->fifo,  // src
+    //     BUF_SIZE,  // transfer count
+    //     false            // start immediately
+    // );
     while (tud_cdc_n_available(0) == 0) {
 
     }
+    adc_fifo_drain();
     adc_run(true);
     while (1) {
-        dma_channel_wait_for_finish_blocking(dma_chan1);
-        my_stdio_usb_out_chars(capture_buf, 2048);
-        dma_channel_configure(dma_chan1, &cfg1,
-            capture_buf,    // dst
-            &adc_hw->fifo,  // src
-            2048,  // transfer count
-            true            // start immediately
-        );
-        channel_config_set_chain_to(&cfg1, dma_chan2);
-        dma_channel_wait_for_finish_blocking(dma_chan2);
-        my_stdio_usb_out_chars(capture_buf2, 2048);
+        channel_config_set_chain_to(&cfg2, dma_chan1);
         dma_channel_configure(dma_chan2, &cfg2,
             capture_buf2,    // dst
             &adc_hw->fifo,  // src
-            2048,  // transfer count
-            true            // start immediately
+            BUF_SIZE,  // transfer count
+            false            // start immediately
         );
-        channel_config_set_chain_to(&cfg2, dma_chan1);
+        gpio_put(LED_PIN, 1);
+        dma_channel_wait_for_finish_blocking(dma_chan1);
+        my_stdio_usb_out_chars(capture_buf, BUF_SIZE);
+        channel_config_set_chain_to(&cfg1, dma_chan2);
+        dma_channel_configure(dma_chan1, &cfg1,
+            capture_buf,    // dst
+            &adc_hw->fifo,  // src
+            BUF_SIZE,  // transfer count
+            false           // start immediately
+        );
+        gpio_put(LED_PIN, 0);
+        dma_channel_wait_for_finish_blocking(dma_chan2);
+        my_stdio_usb_out_chars(capture_buf2, BUF_SIZE);
+        
+        
+        
+        
     }
 }
