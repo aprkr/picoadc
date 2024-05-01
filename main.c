@@ -7,9 +7,9 @@
 #include "tusb.h"
 
 #define BUF_SIZE 81920
-#define SAMPLING_RATE 200000
+#define SAMPLING_RATE 80000
 #define CLK_DIV 48000000 / SAMPLING_RATE
-#define SHIFT true
+#define SHIFT false
 
 uint8_t capture_buf[BUF_SIZE];
 uint8_t capture_buf2[BUF_SIZE];
@@ -71,11 +71,11 @@ void main() {
     dma_channel_config cfg2 = dma_channel_get_default_config(dma_chan2);
 
     // Reading from constant address, writing to incrementing byte addresses
-    channel_config_set_transfer_data_size(&cfg1, DMA_SIZE_8);
+    channel_config_set_transfer_data_size(&cfg1, DMA_SIZE_16);
     channel_config_set_read_increment(&cfg1, false);
     channel_config_set_write_increment(&cfg1, true);
 
-    channel_config_set_transfer_data_size(&cfg2, DMA_SIZE_8);
+    channel_config_set_transfer_data_size(&cfg2, DMA_SIZE_16);
     channel_config_set_read_increment(&cfg2, false);
     channel_config_set_write_increment(&cfg2, true);
 
@@ -86,7 +86,7 @@ void main() {
     dma_channel_configure(dma_chan1, &cfg1,
         capture_buf,    // dst
         &adc_hw->fifo,  // src
-        BUF_SIZE,  // transfer count
+        BUF_SIZE/2,  // transfer count
         true            // start immediately
     );
     while (tud_cdc_n_available(0) == 0) {
@@ -99,7 +99,7 @@ void main() {
         dma_channel_configure(dma_chan2, &cfg2,
             capture_buf2,    // dst
             &adc_hw->fifo,  // src
-            BUF_SIZE,  // transfer count
+            BUF_SIZE/2,  // transfer count
             false            // start immediately
         );
         gpio_put(LED_PIN, 1);
@@ -109,7 +109,7 @@ void main() {
         dma_channel_configure(dma_chan1, &cfg1,
             capture_buf,    // dst
             &adc_hw->fifo,  // src
-            BUF_SIZE,  // transfer count
+            BUF_SIZE/2,  // transfer count
             false           // start immediately
         );
         gpio_put(LED_PIN, 0);
