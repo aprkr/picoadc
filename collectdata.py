@@ -14,8 +14,8 @@ y = array('H',[])
 array = array('H',[])
 i = 0
 BUF_SIZE = 112000
-NUM_SECS = 5
-SAMPLING_RATE = 200000
+NUM_SECS = 1
+SAMPLING_RATE = 250000
 
 NUM_SAMPLES = SAMPLING_RATE * NUM_SECS
 pico.write(0x1)
@@ -31,8 +31,8 @@ while True:
 x= range(i)
 y= array
 plt.plot(x[0:len(y)],y)
-# plt.plot(x[0:100],y[0:100])
+# plt.plot(x[0:50],y[0:50])
 plt.draw()
 
-pico.close()
+# pico.close()
 plt.show(block=True) # block=True lets the window stay open at the end of the animation

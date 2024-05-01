@@ -7,7 +7,7 @@
 #include "tusb.h"
 
 #define BUF_SIZE 112000
-#define SAMPLING_RATE 200000
+#define SAMPLING_RATE 250000
 #define CLK_DIV 48000000 / SAMPLING_RATE
 #define SHIFT false
 
