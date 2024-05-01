@@ -6,8 +6,8 @@
 #include "hardware/structs/bus_ctrl.h"
 #include "tusb.h"
 
-#define BUF_SIZE 81920
-#define SAMPLING_RATE 80000
+#define BUF_SIZE 112000
+#define SAMPLING_RATE 200000
 #define CLK_DIV 48000000 / SAMPLING_RATE
 #define SHIFT false
 
